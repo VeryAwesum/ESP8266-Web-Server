@@ -1,0 +1,168 @@
+    //putstr1cr is my own printf like function and printf could be used.
+    //putstr1cr appends a newline and carrage return to the string.
+    
+void setup_ESP8266(void){
+    putstr1cr("AT");
+    wait_rx1tx2(200);
+    
+    putstr1cr("AT+RST");
+    wait_rx1tx2(2000);
+    
+    putstr1cr("AT+CWMODE_CUR=3");
+    wait_rx1tx2(500);
+    
+    putstr1cr("AT+CWLAP");
+    wait_rx1tx2(5000);
+    
+    putstr1cr("AT+CWJAP_CUR=\"your_wifi_ap\",\"your_password\"");
+    wait_rx1tx2(20000);
+    
+    putstr1cr("AT+CIFSR");
+    wait_rx1tx2(4000);
+    
+    putstr1cr("AT+CIPMUX=1");
+    wait_rx1tx2(500);
+    
+    putstr1cr("AT+CIPSERVER=1,80");
+    wait_rx1tx2(2000);
+    
+    putstr1cr("AT");
+    wait_rx1tx2(200);
+    
+    putstr1cr("AT");
+    wait_rx1tx2(4000);
+}
+
+   //call with wait for input time in milliseconds
+    //input from uart1
+    //echo to to uart2
+    //save input to rx receive buffer 1
+    //millisec1 is a count down timer from an interrupt
+    //interrupt happens every millisecond
+    //rxbuffer is a 512 byte char array
+    
+void wait_rx1tx2(int wait)
+{
+    rxbuffer1i=0;   //zero buffer index
+    millisec1=wait;
+    while(millisec1)
+    {
+        if(eusart1RxCount)
+        {           
+            input1 = EUSART1_Read();
+            control_parser(input1);
+            rxbuffer1[rxbuffer1i++] = input1;
+            //putch2(input1);
+            if(rxbuffer1i>511) rxbuffer1i=511; //don't ever overflow the buffer !!
+        }
+        if (ok.fcp)
+        {
+            //putstr2("\r\n**An OK was received !**\r\n");
+            ok.fcp = 0;
+            millisec1=11;
+        }
+        if (s_data.fcp)
+        {
+            //putstr2("\r\n**An > was received !**\r\n");
+            s_data.fcp = 0;
+            millisec1=11;
+        }
+    }
+    rxbuffer1i=0;   //zero buffer index
+}
+
+  //define structure for the command parser
+  //the command/control string
+  //index and flag
+  
+  typedef struct {
+    unsigned char *strcp;
+    unsigned char icp;
+    unsigned char fcp;
+  }parsercp;
+    
+parsercp ok = {"OK",0,0};
+parsercp error = {"ERROR\r\n",0,0};
+parsercp ready = {"ready\r\n",0,0};
+parsercp send = {"SEND\r\n",0,0};
+parsercp get = {"GET\r\n",0,0};
+parsercp post = {"POST\r\n",0,0};
+parsercp s_data = {">",0,0};
+
+  
+  //call with input from the ESP8266
+  //sets flags if a string is matched
+
+void control_parser(char s_input)
+{
+        if(ok.strcp[ok.icp]==s_input) //try and match the input to string
+            {
+            ok.icp++;                   // a match so point to next character
+            //putch2('o');              //debug echo 
+            if ((1+ok.icp)>strlen(ok.strcp))ok.fcp=1;   //over flow string, set flag caus' we matched
+            }else
+                {
+            ok.icp=0; //not a match, reset index
+            }
+
+		if( error.strcp[error.icp]==s_input)
+            {
+            error.icp++;
+            //putch2('e');
+            if ((1+error.icp)>strlen(error.strcp)) error.fcp=1;
+            }else
+                {
+            error.icp=0;
+            }
+
+		if(ready.strcp[ready.icp]==s_input)
+            {
+            ready.icp++;
+            //putch2('r');
+            if ((1+ready.icp)>strlen(ready.strcp))ready.fcp=1;
+            }else
+                {
+            ready.icp=0;
+            }
+
+		if(send.strcp[send.icp]==s_input)
+            {
+            send.icp++;
+            //putch2('s');
+            if ((1+send.icp)>strlen(send.strcp))send.fcp=1;
+            }else
+                {
+            send.icp=0;
+            }
+
+		if( get.strcp[get.icp]==s_input)
+            {
+            get.icp++;
+            //putch2('g');
+            if ((1+get.icp)>strlen(get.strcp)) get.fcp=1;
+            }else
+                {
+            get.icp=0;
+            }
+
+		if(post.strcp[post.icp]==s_input)
+            {
+            post.icp++;
+            if ((1+post.icp)>strlen(post.strcp))post.fcp=1;
+            }else
+                {
+            post.icp=0;
+            }
+
+		if( s_data.strcp[s_data.icp]==s_input)
+            {
+            s_data.icp++;
+            //putch2('>');
+            if ((1+s_data.icp)>strlen(s_data.strcp)) s_data.fcp=1;
+            }else
+                {
+            s_data.icp=0;
+            }
+
+	}
+
