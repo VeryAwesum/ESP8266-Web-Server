@@ -1,0 +1,81 @@
+  //this is some fancy HTML
+  // needs a large buffer,1000 chars, to hold it.
+  // even a header string
+  // need to include the string library.
+  //has input fields and does an HTML POST
+  
+void makewebpage(void)
+{
+    sprintf(timestable,"<center>%02d:%02d:%02d&emsp;%c&emsp;&emsp;&emsp;operation: %1d %1d %1d %1d&emsp;%1d %1d %1d %1d</center>",11,22,33,'E',1,1,1,1,1,1,1,1);
+        
+    strcpy(webpage,"<!DOCTYPE html><head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\"/>");
+    strcat(webpage,"<title>Turner's Chicken Coop</title></head><body>");
+    strcat(webpage,"<center><h1>Turner's Chicken Coop</h1>");
+    strcat(webpage,"<input type=\"button\" onclick=\"alert('Dont Click Me Again!!')\""
+            "value=\"Click Me!\"title=\"Please don't click this button!\">");
+    sprintf(webpoint+strlen(webpage),"<h2>Time Since %s: %02d:%02d:%02d</h2>","Evening",seconds/3600,(seconds/60)%60,seconds%60);
+    strcat(webpage,"<form action=\"\" method=\"post\">");
+    strcat(webpage,"<table><tr><th>Operation Time</th> <th>Operation Duration</th><th>Operation Controls</th></tr>");
+    strcat(webpage,"<tr><th><input type=\"text\" name=\"optime\""
+            "size=\"11\" placeholder=\"12:34:56 E\""
+            "pattern=\"(^0[0-9])|(^1[0-8])\:[0-5][0-9]\:[0-5][0-9] [EM]$\""
+            "title=\"Enter time like this: HH:MM:SS E    hours:minutes:seconds (E)vening (M)orning.&#013"
+            "Hours must not be over 18.\" ></th>"
+            "<th><input type=\"number\" name=\"opduration\" min=\"1\" max=\"255\""
+            "title=\"Duration Range can be from 1 to 255.\"></th>");
+    strcat(webpage,"<th><input type=\"checkbox\" name=\"opbit8\" value=\"1\"> 8");
+    strcat(webpage,"<input type=\"checkbox\" name=\"opbit7\" value=\"1\"> 7");
+    strcat(webpage,"<input type=\"checkbox\" name=\"opbit6\" value=\"1\"> 6");
+    strcat(webpage,"<input type=\"checkbox\" name=\"opbit5\" value=\"1\"> 5");
+    strcat(webpage,"<input type=\"checkbox\" name=\"opbit4\" value=\"1\"> 4");
+    strcat(webpage,"<input type=\"checkbox\" name=\"opbit3\" value=\"1\"> 3");
+    strcat(webpage,"<input type=\"checkbox\" name=\"opbit2\" value=\"1\"> 2");
+    strcat(webpage,"<input type=\"checkbox\" name=\"opbit1\" value=\"1\"> 1</th></tr></table>");
+    strcat(webpage,"<input type=\"submit\" value=\"Submit\"></form>");
+    strcat(webpage,"</center></body>\r\n\r\n");
+    
+    sprintf(header,"HTTP/1.1 200 OK\r\n"
+                    "Date: Mon, 17 Oct 2016 06:00:00 GMT\r\n"
+                    "Expires: Mon, 17 Oct 2016 06:00:00 GMT\r\n"
+                    "Server: Microchip ESP8266\r\n"
+                    "Content-Length: %d\r\n"
+                    "Connection: close\r\n"
+                    "Content-Type: text/html\r\n\r\n",strlen(webpage)+strlen(timestable)*16);
+}
+
+          //the main code that uses the functions
+          //make the webpage and send to ESP8266
+          
+            makewebpage();
+            putstr2(header);
+            putstr2(webpage);
+            
+            printf("AT+CIPSEND=0,%d\r\n",strlen(header));
+            wait_rx1tx2(500);
+            putstr1(header);
+            wait_rx1tx2(500);
+            
+            printf("AT+CIPSEND=0,%d\r\n",strlen(webpage));
+            wait_rx1tx2(500);
+            putstr1(webpage);
+            wait_rx1tx2(800);
+          
+          //this is debug code to test if status from the microcontroller
+          // can be sent as HTML
+          // use a for loop to send 16 lines of HTML to the ESP8266
+          
+            for(jjk=0;jjk<256;jjk=jjk+16)
+            {
+            evmorn='E'+(8*(jjk>127));
+            printf("AT+CIPSEND=0,%d\r\n",strlen(timestable));
+            putstr2(timestable);
+            wait_rx1tx2(500);
+            printf("<center>%02d:%02d:%02d&emsp;%c&emsp;&emsp;&emsp;operation: %1d %1d %1d %1d&emsp;%1d %1d %1d %1d</center>",01,02,03,evmorn,jjk&128&&1,jjk&64&&1,jjk&32&&1,jjk&16&&1,jjk&8&&1,jjk&4&&1,jjk&2&&1,jjk&1&&1);
+            wait_rx1tx2(500);
+            }
+            //putstr1cr("AT+CIPCLOSE=0");
+            
+            wait_rx1tx2(200);
+            
+ //the web page has been made and sent
+//
